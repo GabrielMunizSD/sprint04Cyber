@@ -1,11 +1,11 @@
-# 🏨 Totem Concierge — Aplicação Flask Segura
+# Totem Concierge — Aplicação Flask Segura
 
 Projeto desenvolvido para a disciplina de Segurança em Sistemas Embarcados.  
 Implementa os controles de segurança exigidos no **Entregável 3**.
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 totem-flask/
@@ -26,13 +26,16 @@ totem-flask/
 
 ---
 
-## ⚙️ Como executar
+## Como executar
 
 ### 1. Instalar dependências
 ```bash
 pip install -r requirements.txt
 ```
-
+### Caso esteja no Windows, não há necessiade de instalar o RPi.GPIO, então use esse código
+```bash
+pip install flask flask-limiter python-dotenv cryptography
+```
 ### 2. Configurar credenciais
 ```bash
 # Copie o modelo e edite com suas credenciais reais
@@ -48,7 +51,7 @@ ADMIN_PASS=SuaSenhaForte
 IDLE_TIMEOUT=10
 ```
 
-> 💡 Para gerar uma SECRET_KEY segura:  
+>  Para gerar uma SECRET_KEY segura:  
 > `python -c "import secrets; print(secrets.token_hex(32))"`
 
 ### 3. Rodar a aplicação
@@ -60,18 +63,18 @@ Acesse em: `http://localhost:5000`
 
 ---
 
-## 🔒 Controles de Segurança Implementados
+##  Controles de Segurança Implementados
 
 ### 1. Controle de Acesso (duas áreas)
 
 | Rota | Nível | Descrição |
 |---|---|---|
-| `/` | 🌐 Público | Tela do totem — visível a qualquer pessoa |
-| `/login` | 🌐 Público | Formulário de autenticação |
-| `/admin` | 🔐 Admin | Painel de controle (exige login) |
-| `/admin/led` | 🔐 Admin | Acionamento do LED (exige login) |
-| `/admin/logs` | 🔐 Admin | Visualização de logs (exige login) |
-| `/api/presenca` | 🌐 Público | Endpoint do sensor de proximidade |
+| `/` | Público | Tela do totem — visível a qualquer pessoa |
+| `/login` |  Público | Formulário de autenticação |
+| `/admin` |  Admin | Painel de controle (exige login) |
+| `/admin/led` |  Admin | Acionamento do LED (exige login) |
+| `/admin/logs` |  Admin | Visualização de logs (exige login) |
+| `/api/presenca` |  Público | Endpoint do sensor de proximidade |
 
 Implementado com o decorador `@login_required` e `Flask sessions`.
 
@@ -113,7 +116,7 @@ Implementado com o decorador `@login_required` e `Flask sessions`.
 
 ---
 
-## 🎥 Roteiro para o vídeo (até 5 min)
+##  Roteiro para o vídeo (até 5 min)
 
 1. Mostrar a **tela pública** do totem (`/`)
 2. Tentar acessar `/admin` sem login → mostrar redirecionamento e log gerado
@@ -125,7 +128,7 @@ Implementado com o decorador `@login_required` e `Flask sessions`.
 
 ---
 
-## 📦 Dependências
+##  Dependências
 
 ```
 flask==3.1.1

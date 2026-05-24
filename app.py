@@ -15,7 +15,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 
-# ── Tenta importar RPi.GPIO ───────────────────────────────────────────────────
+# Tenta importar RPi.GPIO
 try:
     import RPi.GPIO as GPIO
     RASPBERRY = True
@@ -27,13 +27,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  CONFIGURAÇÕES
-# ══════════════════════════════════════════════════════════════════════════════
 app.config["DEBUG"]                          = False
 app.config["PERMANENT_SESSION_LIFETIME"]     = timedelta(minutes=30)
 
-# ── Cookies de sessão seguros (Hardening #1) ──────────────────────────────────
+# Cookies de sessão seguros (Hardening #1)
 app.config["SESSION_COOKIE_HTTPONLY"]  = True   # JS não acessa o cookie
 app.config["SESSION_COOKIE_SECURE"]   = True    # cookie só em HTTPS
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # proteção contra CSRF básica
@@ -45,11 +43,11 @@ PINO_PIR     = int(os.getenv("PINO_PIR",  "17"))
 PINO_LED     = int(os.getenv("PINO_LED",  "22"))
 DB_PATH      = os.getenv("DB_PATH", "totem.db")
 
-# ── Estado global do sensor ───────────────────────────────────────────────────
+# Estado global do sensor
 estado = {"presente": False, "sessao_ativa": False, "ultima_presenca": None}
 estado_lock = threading.Lock()
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+#  Logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
@@ -58,9 +56,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  RATE LIMITER  (Entregável 4 — proteção contra abuso)
-# ══════════════════════════════════════════════════════════════════════════════
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
@@ -68,10 +64,7 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  BANCO DE DADOS SQLite  (Entregável 4 — consultas parametrizadas)
-# ══════════════════════════════════════════════════════════════════════════════
-
 def get_db():
     """Retorna conexão com o banco; cria se não existir."""
     if "db" not in g:
@@ -108,7 +101,7 @@ def init_db():
         cur = conn.execute("SELECT COUNT(*) FROM usuarios_admin")
         if cur.fetchone()[0] == 0:
             conn.execute(
-                # ── consulta PARAMETRIZADA (previne SQL Injection) ──────────
+                # consulta PARAMETRIZADA (previne SQL Injection)
                 "INSERT INTO usuarios_admin (login, senha) VALUES (?, ?)",
                 (os.getenv("ADMIN_USER", "admin"), os.getenv("ADMIN_PASS", "admin123"))
             )
@@ -119,7 +112,7 @@ def db_registrar_evento(nivel, evento, ip=None, detalhes=None):
     try:
         db = get_db()
         db.execute(
-            # ── consulta PARAMETRIZADA — valores nunca concatenados na string ─
+            # consulta PARAMETRIZADA — valores nunca concatenados na string
             "INSERT INTO eventos (momento, nivel, evento, ip, detalhes) VALUES (?, ?, ?, ?, ?)",
             (datetime.utcnow().isoformat(), nivel, evento, ip, detalhes)
         )
@@ -135,7 +128,7 @@ def db_buscar_usuario(login):
     """
     db = get_db()
     return db.execute(
-        # ── consulta PARAMETRIZADA ────────────────────────────────────────────
+        # consulta PARAMETRIZADA
         "SELECT * FROM usuarios_admin WHERE login = ?",
         (login,)
     ).fetchone()
@@ -148,10 +141,7 @@ def db_listar_eventos(limite=50):
         (limite,)
     ).fetchall()
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  CABEÇALHOS DE SEGURANÇA  (Hardening #2)
-# ══════════════════════════════════════════════════════════════════════════════
-
 @app.after_request
 def aplicar_cabecalhos_seguranca(response):
     """
@@ -185,10 +175,7 @@ def aplicar_cabecalhos_seguranca(response):
 
     return response
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  GPIO
-# ══════════════════════════════════════════════════════════════════════════════
-
 def gpio_setup():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(PINO_PIR, GPIO.IN)
@@ -227,10 +214,7 @@ def piscar_led(duracao=2):
             logger.info("LED simulado  duracao=%ds", duracao)
     threading.Thread(target=_run, daemon=True).start()
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  DECORADOR
-# ══════════════════════════════════════════════════════════════════════════════
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -243,10 +227,8 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ROTAS PÚBLICAS
-# ══════════════════════════════════════════════════════════════════════════════
 
+#  ROTAS PÚBLICAS
 @app.route("/")
 def totem():
     return render_template("totem.html", idle_timeout=IDLE_TIMEOUT)
@@ -285,9 +267,7 @@ def presenca():
             logger.info("SESSÃO ENCERRADA  sensor=simulado ip=%s", request.remote_addr)
     return jsonify({"status": "ok", "sessao_ativa": estado["sessao_ativa"]})
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  AUTENTICAÇÃO  (com rate limit — Entregável 4)
-# ══════════════════════════════════════════════════════════════════════════════
+#  AUTENTICAÇÃO  (com rate limit)
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")   # ← Rate limit: máx 5 tentativas/min por IP
@@ -297,7 +277,7 @@ def login():
         senha   = request.form.get("senha",   "").strip()
         ip      = request.remote_addr
 
-        # ── Validação de entradas ─────────────────────────────────────────────
+        # Validação de entradas 
         erros = []
         if not usuario:         erros.append("Campo usuário obrigatório.")
         if not senha:           erros.append("Campo senha obrigatório.")
@@ -310,7 +290,7 @@ def login():
             db_registrar_evento("WARNING", "LOGIN ENTRADA INVALIDA", ip)
             return render_template("login.html")
 
-        # ── Verificação via banco com consulta parametrizada ──────────────────
+        # Verificação via banco com consulta parametrizada
         usuario_db = db_buscar_usuario(usuario)
 
         if usuario_db and usuario_db["senha"] == senha:
@@ -346,10 +326,7 @@ def rate_limit_excedido(e):
     flash("Muitas tentativas. Aguarde 1 minuto antes de tentar novamente.", "error")
     return render_template("login.html"), 429
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  ÁREA ADMINISTRATIVA
-# ══════════════════════════════════════════════════════════════════════════════
-
 @app.route("/admin")
 @login_required
 def admin():
@@ -382,10 +359,7 @@ def ver_logs():
     eventos_db = db_listar_eventos(50)
     return render_template("logs.html", linhas=linhas_arquivo, eventos=eventos_db)
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  INICIALIZAÇÃO
-# ══════════════════════════════════════════════════════════════════════════════
-
 if __name__ == "__main__":
     init_db()
     logger.info("Banco de dados inicializado: %s", DB_PATH)
@@ -397,7 +371,7 @@ if __name__ == "__main__":
     else:
         logger.info("Modo simulado — use os botões na tela do totem")
 
-    # ── HTTPS com certificado auto-assinado (Entregável 4) ───────────────────
+    # HTTPS com certificado auto-assinado
     cert_path = os.getenv("SSL_CERT", "certs/cert.pem")
     key_path  = os.getenv("SSL_KEY",  "certs/key.pem")
 
