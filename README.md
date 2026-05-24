@@ -28,7 +28,7 @@ totem-flask/
 
 ## Como executar
 
-### 1. Instalar dependências
+### 1. Instalar dependências ( No RaspberryPi)
 ```bash
 pip install -r requirements.txt
 ```
