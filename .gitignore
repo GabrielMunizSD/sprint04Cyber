@@ -1,0 +1,18 @@
+# Credenciais — NUNCA versionar
+.env
+
+# Certificados SSL — nunca versionar a chave privada
+certs/key.pem
+certs/cert.pem
+
+# Banco de dados local
+*.db
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
